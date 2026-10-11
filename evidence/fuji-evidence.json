@@ -21,6 +21,64 @@
       "block": 59306896,
       "at": "2026-10-11T14:08:43.970Z",
       "tx": "https://testnet.snowtrace.io/tx/0x2384d975b453a523524346ce7cd00e8d039bd8c4b6e7ec2ea73e1f5970077bef"
+    },
+    {
+      "step": "fund-operator",
+      "to": "0x215edFA8C9Db88A972FbEDb810b884ADe94fca7B",
+      "amount": "0.002",
+      "txHash": "0xe931ef101e016bbad59cc04a1a8db6b147c55e495bbcd013e98811e6af9dc3c3",
+      "block": 59308703,
+      "at": "2026-10-11T15:32:27.530Z",
+      "tx": "https://testnet.snowtrace.io/tx/0xe931ef101e016bbad59cc04a1a8db6b147c55e495bbcd013e98811e6af9dc3c3"
+    },
+    {
+      "step": "set-operator",
+      "from": "0xa6547c2812140c0495113d4490eb0f2805A67ecD",
+      "to": "0x215edFA8C9Db88A972FbEDb810b884ADe94fca7B",
+      "txHash": "0xcca9d1976ab774685cef487e1475ee685f19960e5af56ba73973a731c1e9f9f7",
+      "block": 59308707,
+      "at": "2026-10-11T15:32:27.532Z",
+      "tx": "https://testnet.snowtrace.io/tx/0xcca9d1976ab774685cef487e1475ee685f19960e5af56ba73973a731c1e9f9f7"
+    },
+    {
+      "step": "anchor",
+      "source": "app",
+      "sender": "0x215edFA8C9Db88A972FbEDb810b884ADe94fca7B",
+      "kind": "TEST",
+      "ref": "test/2026-10-11T15:59:48",
+      "ledgerEvent": "admin#196",
+      "hash": "0x79aa7c48f366264fc6d4862e39969f6a30b2754e4ccb5ab4b66aa6410f9a4791",
+      "txHash": "0x41a6b23d19891b6fa92896242dbfd827c6b8707eeb36f0855ce4c57d23469e42",
+      "block": 59309304,
+      "at": "2026-10-11T15:59:51.472Z",
+      "tx": "https://testnet.snowtrace.io/tx/0x41a6b23d19891b6fa92896242dbfd827c6b8707eeb36f0855ce4c57d23469e42"
+    },
+    {
+      "step": "anchor",
+      "source": "app",
+      "sender": "0x215edFA8C9Db88A972FbEDb810b884ADe94fca7B",
+      "kind": "LEDGER_HEAD",
+      "ref": "tax/head",
+      "ledgerEvent": "tax#97 (head = event #96)",
+      "hash": "0x07156736829a9c40e182002cbad411c250283a110b092d94862bf26a8659b267",
+      "txHash": "0x3a1c5d0093de40c15deed22f9a568c0a1b2ad04f66f5ae084771583c69e45ac9",
+      "block": 59309310,
+      "at": "2026-10-11T16:00:00.260Z",
+      "tx": "https://testnet.snowtrace.io/tx/0x3a1c5d0093de40c15deed22f9a568c0a1b2ad04f66f5ae084771583c69e45ac9"
+    },
+    {
+      "step": "anchor",
+      "source": "app",
+      "sender": "0x215edFA8C9Db88A972FbEDb810b884ADe94fca7B",
+      "kind": "P2P_ROOT",
+      "ref": "P2P-REHEARSAL-001/match",
+      "ledgerEvent": "p2p:P2P-REHEARSAL-001#2",
+      "hash": "0xb6652b6d37dffb6f04f7073fb9ef5180b5143b565210778683eff0c3dff6013a",
+      "txHash": "0x54a4a46708d4bbdd641f9f4f14fb88c085f2af29d35295834f4d6caab4ec38e6",
+      "block": 59309318,
+      "at": "2026-10-11T16:00:16.957Z",
+      "tx": "https://testnet.snowtrace.io/tx/0x54a4a46708d4bbdd641f9f4f14fb88c085f2af29d35295834f4d6caab4ec38e6"
     }
-  ]
+  ],
+  "operator": "0x215edFA8C9Db88A972FbEDb810b884ADe94fca7B"
 }

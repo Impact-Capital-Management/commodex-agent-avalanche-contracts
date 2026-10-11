@@ -41,11 +41,16 @@ far below 0.000001 AVAX.
 
 ## Evidence
 
-Network: Avalanche Fuji C-Chain, chain id 43113. Operator and deployer: `0xa6547c2812140c0495113d4490eb0f2805A67ecD`.
+Network: Avalanche Fuji C-Chain, chain id 43113. Deployer: `0xa6547c2812140c0495113d4490eb0f2805A67ecD`. Operator since 2026-10-11 15:32 UTC: the Commodex staging server wallet `0x215edFA8C9Db88A972FbEDb810b884ADe94fca7B`.
 Raw record: [`evidence/fuji-evidence.json`](evidence/fuji-evidence.json).
 
 | Date (UTC) | Step | Block | Explorer |
 |---|---|---|---|
+| 2026-10-11 16:00 | Commodex app anchors a Pool-to-Pool match root (`P2P_ROOT`, 12 buyers, every Merkle proof verified) | 59309318 | https://testnet.snowtrace.io/tx/0x54a4a46708d4bbdd641f9f4f14fb88c085f2af29d35295834f4d6caab4ec38e6 |
+| 2026-10-11 16:00 | Commodex app anchors the head of its `tax` ledger stream (`LEDGER_HEAD`) | 59309310 | https://testnet.snowtrace.io/tx/0x3a1c5d0093de40c15deed22f9a568c0a1b2ad04f66f5ae084771583c69e45ac9 |
+| 2026-10-11 15:59 | Commodex app sends its first anchor (`TEST`) from the server wallet | 59309304 | https://testnet.snowtrace.io/tx/0x41a6b23d19891b6fa92896242dbfd827c6b8707eeb36f0855ce4c57d23469e42 |
+| 2026-10-11 15:32 | `setOperator`: the staging server wallet becomes the operator | 59308707 | https://testnet.snowtrace.io/tx/0xcca9d1976ab774685cef487e1475ee685f19960e5af56ba73973a731c1e9f9f7 |
+| 2026-10-11 15:32 | Server wallet funded with 0.002 test AVAX for gas | 59308703 | https://testnet.snowtrace.io/tx/0xe931ef101e016bbad59cc04a1a8db6b147c55e495bbcd013e98811e6af9dc3c3 |
 | 2026-10-11 14:08 | First anchor: `keccak256("commodex-m0-2026-10")` = `0x8b8d8a98…eae3fc00`, kind `TEST`, ref "M0 first hash" | 59306896 | https://testnet.snowtrace.io/tx/0x2384d975b453a523524346ce7cd00e8d039bd8c4b6e7ec2ea73e1f5970077bef |
 | 2026-10-11 14:07 | Deploy CommodexAnchor | 59306874 | https://testnet.snowtrace.io/tx/0x24efb4ba147d4dab9cd9ae98a11edddd53b4ae4dc1cd861f5a8b44a66a3673a4 |
 | 2026-10-11 | Source verified on the explorer (solc 0.8.24, optimizer 200, EVM paris) | — | https://testnet.snowtrace.io/address/0xe274C452dFb0D259FA413EEd3a830197a4Fd50ef/contract/43113/code |

@@ -29,6 +29,7 @@ Avalanche escrow contracts agent for the Commodex Avalanche C-Chain setup. Commo
 ```bash
 npm install
 npm test                                   # 7 checks on an in-memory chain, no Fuji funds
+COMMODEX_FUJI_KEY_FILE=/path/key node anchor.mjs whoami   # address + balance, sends nothing
 COMMODEX_FUJI_KEY_FILE=/path/key node anchor.mjs deploy
 COMMODEX_FUJI_KEY_FILE=/path/key node anchor.mjs anchor "<text or 0x hash>" TEST "<ref>"
 node anchor.mjs check "<text or 0x hash>"

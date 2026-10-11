@@ -2,6 +2,7 @@
 // Commodex M0 on Avalanche Fuji: compile, deploy and use CommodexAnchor.
 //
 //   node anchor.mjs compile
+//   node anchor.mjs whoami      (shows the key's address and balance, sends nothing)
 //   node anchor.mjs deploy
 //   node anchor.mjs anchor <0x32-byte-hash | text> <KIND> <ref>
 //   node anchor.mjs check  <0x32-byte-hash>
@@ -58,11 +59,25 @@ function saveEvidence(e) {
 async function signer() {
   const file = process.env.COMMODEX_FUJI_KEY_FILE;
   if (!file) throw new Error('Set COMMODEX_FUJI_KEY_FILE to the file holding the Fuji test wallet key.');
-  const key = readFileSync(file, 'utf8').trim();
   const provider = new ethers.JsonRpcProvider(RPC);
   const net = await provider.getNetwork();
   if (net.chainId !== CHAIN_ID) throw new Error(`RPC answers chain ${net.chainId}, expected 43113 (Fuji). Refusing.`);
-  return new ethers.Wallet(key, provider);
+  return walletFromFile(file).connect(provider);
+}
+
+// Accepts a private key with or without 0x, quotes, spaces or a Notepad BOM, or a 12/24-word
+// recovery phrase (first account, m/44'/60'/0'/0/0). Never prints the secret, only its shape.
+function walletFromFile(file) {
+  const raw = readFileSync(file, 'utf8').replace(/^﻿/, '').trim().replace(/^["']|["']$/g, '').trim();
+  const hex = raw.replace(/\s+/g, '').replace(/^0x/i, '');
+  if (/^[0-9a-fA-F]{64}$/.test(hex)) return new ethers.Wallet('0x' + hex);
+  const words = raw.toLowerCase().split(/\s+/).filter(Boolean);
+  if ([12, 15, 18, 21, 24].includes(words.length) && words.every((w) => /^[a-z]+$/.test(w))) {
+    return ethers.Wallet.fromPhrase(words.join(' '));
+  }
+  const lines = raw.split(/\r?\n/).length;
+  throw new Error(`The key file is not a private key (64 hex characters, optional 0x) or a 12/24-word phrase. `
+    + `It has ${lines} line(s), ${hex.length} characters without spaces, ${words.length} word(s). Keep only the key on one line.`);
 }
 
 function toHash(value) {
@@ -104,6 +119,17 @@ async function anchor(value, kind = 'TEST', ref = '') {
   console.log(`anchored ${hash} as ${kind} in block ${rc.blockNumber}\n${EXPLORER}/tx/${tx.hash}`);
 }
 
+const EXPECTED_WALLET = '0xa6547c2812140c0495113d4490eb0f2805A67ecD';
+
+async function whoami() {
+  const w = await signer();
+  const bal = await w.provider.getBalance(w.address);
+  const tx = await w.provider.getTransactionCount(w.address);
+  console.log(`key file belongs to ${w.address}`);
+  console.log(`balance ${ethers.formatEther(bal)} AVAX on Fuji, ${tx} transaction(s) sent`);
+  console.log(w.address === EXPECTED_WALLET ? 'this is the Commodex Fuji test wallet - ready to deploy' : `note: this is not the wallet bound in the admin desk (${EXPECTED_WALLET})`);
+}
+
 async function check(value) {
   const e = evidence();
   if (!e.contract) throw new Error('No contract recorded yet.');
@@ -114,9 +140,9 @@ async function check(value) {
 }
 
 const [cmd, ...args] = process.argv.slice(2);
-const run = { compile: async () => compile(), deploy, anchor: () => anchor(...args), check: () => check(args[0]) }[cmd];
+const run = { compile: async () => compile(), whoami, deploy, anchor: () => anchor(...args), check: () => check(args[0]) }[cmd];
 if (!run) {
-  console.log('usage: node anchor.mjs compile | deploy | anchor <hash|text> <KIND> <ref> | check <hash|text>');
+  console.log('usage: node anchor.mjs compile | whoami | deploy | anchor <hash|text> <KIND> <ref> | check <hash|text>');
   process.exit(2);
 }
 run().catch((err) => { console.error(err.shortMessage || err.message); process.exit(1); });

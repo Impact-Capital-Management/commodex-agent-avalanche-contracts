@@ -6,6 +6,7 @@
 //   node anchor.mjs deploy
 //   node anchor.mjs anchor <0x32-byte-hash | text> <KIND> <ref>
 //   node anchor.mjs check  <0x32-byte-hash>
+//   node anchor.mjs handover <0x server wallet> [AVAX]   (fund it + make it the operator)
 //
 // The signer key is read from the file named by COMMODEX_FUJI_KEY_FILE (one line,
 // 0x… private key of the Fuji test wallet). It is never printed or written.
@@ -130,6 +131,32 @@ async function whoami() {
   console.log(w.address === EXPECTED_WALLET ? 'this is the Commodex Fuji test wallet - ready to deploy' : `note: this is not the wallet bound in the admin desk (${EXPECTED_WALLET})`);
 }
 
+// Hand the contract over to the Commodex server wallet: send it test AVAX for gas, then setOperator.
+// After this, only the server can anchor; the test wallet keeps nothing but its remaining AVAX.
+async function handover(next, amount = '0.002') {
+  if (!/^0x[0-9a-fA-F]{40}$/.test(next || '')) throw new Error('usage: node anchor.mjs handover <server wallet 0x address> [AVAX amount, default 0.002]');
+  const e = evidence();
+  if (!e.contract) throw new Error('No contract recorded yet.');
+  const w = await signer();
+  const target = ethers.getAddress(next);
+  const c = new ethers.Contract(e.contract, artifact().abi, w);
+  const current = await c.operator();
+  if (current === target) { console.log(`${target} is already the operator - nothing to do`); return; }
+  if (current !== w.address) throw new Error(`this key is not the operator (operator is ${current})`);
+  const fund = await w.sendTransaction({ to: target, value: ethers.parseEther(amount) });
+  console.log(`funding ${target} with ${amount} AVAX: ${fund.hash}`);
+  const frc = await fund.wait();
+  const tx = await c.setOperator(target);
+  console.log(`setOperator tx ${tx.hash}, waiting...`);
+  const rc = await tx.wait();
+  e.entries.push({ step: 'fund-operator', to: target, amount, txHash: fund.hash, block: frc.blockNumber, at: new Date().toISOString(), tx: `${EXPLORER}/tx/${fund.hash}` });
+  e.entries.push({ step: 'set-operator', from: w.address, to: target, txHash: tx.hash, block: rc.blockNumber, at: new Date().toISOString(), tx: `${EXPLORER}/tx/${tx.hash}` });
+  e.operator = target;
+  saveEvidence(e);
+  console.log(`operator is now ${await c.operator()} (block ${rc.blockNumber})
+${EXPLORER}/tx/${tx.hash}`);
+}
+
 async function check(value) {
   const e = evidence();
   if (!e.contract) throw new Error('No contract recorded yet.');
@@ -140,9 +167,9 @@ async function check(value) {
 }
 
 const [cmd, ...args] = process.argv.slice(2);
-const run = { compile: async () => compile(), whoami, deploy, anchor: () => anchor(...args), check: () => check(args[0]) }[cmd];
+const run = { compile: async () => compile(), whoami, deploy, handover: () => handover(args[0], args[1]), anchor: () => anchor(...args), check: () => check(args[0]) }[cmd];
 if (!run) {
-  console.log('usage: node anchor.mjs compile | whoami | deploy | anchor <hash|text> <KIND> <ref> | check <hash|text>');
+  console.log('usage: node anchor.mjs compile | whoami | deploy | handover <0x server> [AVAX] | anchor <hash|text> <KIND> <ref> | check <hash|text>');
   process.exit(2);
 }
 run().catch((err) => { console.error(err.shortMessage || err.message); process.exit(1); });

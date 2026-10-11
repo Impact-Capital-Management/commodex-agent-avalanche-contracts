@@ -1,0 +1,26 @@
+{
+  "network": "Avalanche Fuji C-Chain",
+  "chainId": 43113,
+  "contract": "0xe274C452dFb0D259FA413EEd3a830197a4Fd50ef",
+  "deployer": "0xa6547c2812140c0495113d4490eb0f2805A67ecD",
+  "entries": [
+    {
+      "step": "deploy",
+      "txHash": "0x24efb4ba147d4dab9cd9ae98a11edddd53b4ae4dc1cd861f5a8b44a66a3673a4",
+      "block": 59306874,
+      "at": "2026-10-11T14:07:51.821Z",
+      "tx": "https://testnet.snowtrace.io/tx/0x24efb4ba147d4dab9cd9ae98a11edddd53b4ae4dc1cd861f5a8b44a66a3673a4",
+      "address": "https://testnet.snowtrace.io/address/0xe274C452dFb0D259FA413EEd3a830197a4Fd50ef"
+    },
+    {
+      "step": "anchor",
+      "kind": "TEST",
+      "ref": "M0 first hash",
+      "hash": "0x8b8d8a98d4da7cafed966ad42b450db296f6a71a953c5be8808f0262eae3fc00",
+      "txHash": "0x2384d975b453a523524346ce7cd00e8d039bd8c4b6e7ec2ea73e1f5970077bef",
+      "block": 59306896,
+      "at": "2026-10-11T14:08:43.970Z",
+      "tx": "https://testnet.snowtrace.io/tx/0x2384d975b453a523524346ce7cd00e8d039bd8c4b6e7ec2ea73e1f5970077bef"
+    }
+  ]
+}

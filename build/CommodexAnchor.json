@@ -1,0 +1,161 @@
+{
+  "contractName": "CommodexAnchor",
+  "compiler": "0.8.24+commit.e11b9ed9.Emscripten.clang",
+  "abi": [
+    {
+      "inputs": [],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "hash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint256",
+          "name": "blockNumber",
+          "type": "uint256"
+        }
+      ],
+      "name": "AlreadyAnchored",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "NotOperator",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "ZeroHash",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "ZeroOperator",
+      "type": "error"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "hash",
+          "type": "bytes32"
+        },
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "kind",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "string",
+          "name": "ref",
+          "type": "string"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "blockNumber",
+          "type": "uint256"
+        }
+      ],
+      "name": "Anchored",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "previous",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "next",
+          "type": "address"
+        }
+      ],
+      "name": "OperatorChanged",
+      "type": "event"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "hash",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "kind",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "string",
+          "name": "ref",
+          "type": "string"
+        }
+      ],
+      "name": "anchor",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
+      "name": "anchoredAtBlock",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "operator",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "next",
+          "type": "address"
+        }
+      ],
+      "name": "setOperator",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x608060405234801561001057600080fd5b50600080546001600160a01b0319163390811782556040519091907fd58299b712891143e76310d5e664c4203c940a67db37cf856bdaa3c5c76a802c908290a361039a8061005f6000396000f3fe608060405234801561001057600080fd5b506004361061004c5760003560e01c80630cbeeb9e14610051578063570ca7351461008457806385094452146100af578063b3ab15fb146100c4575b600080fd5b61007161005f366004610262565b60016020526000908152604090205481565b6040519081526020015b60405180910390f35b600054610097906001600160a01b031681565b6040516001600160a01b03909116815260200161007b565b6100c26100bd36600461027b565b6100d7565b005b6100c26100d23660046102fb565b6101b5565b6000546001600160a01b0316331461010257604051631f0853c160e21b815260040160405180910390fd5b836101205760405163f1ae58d560e01b815260040160405180910390fd5b600084815260016020526040902054801561015c5760405163197052c760e31b8152600481018690526024810182905260440160405180910390fd5b6000858152600160205260409081902043908190559051859187917f98fa7045c9d9c2bf6ed7c11bb77e686bf234bcade9fdbd8b1a3f3f1d4e161038916101a6918891889161032b565b60405180910390a35050505050565b6000546001600160a01b031633146101e057604051631f0853c160e21b815260040160405180910390fd5b6001600160a01b038116610207576040516389961e9160e01b815260040160405180910390fd5b600080546040516001600160a01b03808516939216917fd58299b712891143e76310d5e664c4203c940a67db37cf856bdaa3c5c76a802c91a3600080546001600160a01b0319166001600160a01b0392909216919091179055565b60006020828403121561027457600080fd5b5035919050565b6000806000806060858703121561029157600080fd5b8435935060208501359250604085013567ffffffffffffffff808211156102b757600080fd5b818701915087601f8301126102cb57600080fd5b8135818111156102da57600080fd5b8860208285010111156102ec57600080fd5b95989497505060200194505050565b60006020828403121561030d57600080fd5b81356001600160a01b038116811461032457600080fd5b9392505050565b604081528260408201528284606083013760006060848301015260006060601f19601f860116830101905082602083015294935050505056fea26469706673582212204a92d1482ea1dd44ca27740bb2551f1805918937524bf2368fe9f1bfa2c3f0b764736f6c63430008180033"
+}

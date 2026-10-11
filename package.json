@@ -1,0 +1,19 @@
+{
+  "name": "commodex-fuji-anchor",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Commodex M0: hash-anchor contract on Avalanche Fuji (chain id 43113)",
+  "scripts": {
+    "compile": "node anchor.mjs compile",
+    "deploy": "node anchor.mjs deploy",
+    "test": "node test/anchor.test.mjs"
+  },
+  "dependencies": {
+    "ethers": "6.13.4",
+    "solc": "0.8.24"
+  },
+  "devDependencies": {
+    "ganache": "7.9.2"
+  }
+}

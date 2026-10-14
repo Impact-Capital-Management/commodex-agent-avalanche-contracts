@@ -4,6 +4,7 @@ Avalanche escrow contracts agent for the Commodex Avalanche C-Chain setup. Commo
 
 - Production: https://commodex.xyz
 - Testnet UI: https://wedevnext.commodex.xyz
+- Fuji evidence page on the testnet UI: https://wedevnext.commodex.xyz/fuji
 - Network: Avalanche Fuji C-Chain (EVM), chain id `43113`
 
 ## Agent
@@ -34,6 +35,16 @@ COMMODEX_FUJI_KEY_FILE=/path/key node anchor.mjs deploy
 COMMODEX_FUJI_KEY_FILE=/path/key node anchor.mjs anchor "<text or 0x hash>" TEST "<ref>"
 node anchor.mjs check "<text or 0x hash>"
 ```
+
+Independent re-check of every transaction below, no install and no key:
+
+```bash
+git clone https://github.com/Impact-Capital-Management/commodex-agent-contract-assurance
+node commodex-agent-contract-assurance/checks/verify-fuji.mjs     # 10/10 PASS on 14 Oct 2026
+```
+
+The app code that calls this contract from the Commodex testnet UI is in
+[commodex-agent-avalanche-engineering/app](https://github.com/Impact-Capital-Management/commodex-agent-avalanche-engineering/tree/main/app).
 
 `anchor.mjs` refuses any RPC that does not answer chain id 43113. Each mined transaction is appended to
 `evidence/fuji-evidence.json` with its explorer link. Measured deploy cost on 11 Oct 2026: about 272,000 gas,

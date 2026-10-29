@@ -16,14 +16,15 @@ Avalanche escrow contracts agent for the Commodex Avalanche C-Chain setup. Commo
 | FR scope | FR-03 |
 | Squad page | https://team.impactcapital.ltd/showcase/commodex/ |
 
-## Status — 11 October 2026
+## Status — updated 29 October 2026
 
 **CommodexAnchor v0 is deployed on Avalanche Fuji, source verified on the explorer, first hash anchored.**
 
 | Contract | What it does | State |
 |---|---|---|
 | [`contracts/CommodexAnchor.sol`](contracts/CommodexAnchor.sol) | Stores a 32-byte hash and the block it was mined in; emits `Anchored`. No funds, no token, no personal data. Only the operator may anchor; one hash once. | Deployed 11 Oct 2026 at [`0xe274C452dFb0D259FA413EEd3a830197a4Fd50ef`](https://testnet.snowtrace.io/address/0xe274C452dFb0D259FA413EEd3a830197a4Fd50ef); 7/7 local tests |
-| `CommodexEscrow.sol` | Test-USDC escrow: fund, release after assay and custody, refund after a deadline | Not written yet (Phase 3 rehearsal, reviewed first by [contract assurance](https://github.com/Impact-Capital-Management/commodex-agent-contract-assurance)) |
+| [`contracts/CommodexEscrow.sol`](contracts/CommodexEscrow.sol) | Test-USDC escrow for one trade at a time: buyer funds, buyer or operator releases, seller or operator refunds, deadline refund for anyone, dispute frozen for the operator. Fee capped at 3%. Pause blocks new trades only. Rejects fee-on-transfer tokens. TESTNET ONLY. | Written and tested locally: 14/14 test groups on an in-memory chain. Not yet deployed to Fuji; the deploy runs with the owner's key ([`escrow.mjs`](escrow.mjs)). |
+| [`contracts/mocks/TestTokens.sol`](contracts/mocks/TestTokens.sol) | Test stablecoin `tUSDC` (6 decimals, owner mints test supply) plus two adversarial tokens used only in tests: one burns 1% per transfer, one calls back into the escrow mid-payout. | Test-only, no value |
 
 ## Run
 
@@ -35,6 +36,18 @@ COMMODEX_FUJI_KEY_FILE=/path/key node anchor.mjs deploy
 COMMODEX_FUJI_KEY_FILE=/path/key node anchor.mjs anchor "<text or 0x hash>" TEST "<ref>"
 node anchor.mjs check "<text or 0x hash>"
 ```
+
+Escrow (testnet only):
+
+```bash
+npm run test:escrow                        # 14 test groups on an in-memory chain, no Fuji funds
+npm run test:all                           # anchor + escrow
+COMMODEX_FUJI_KEY_FILE=/path/key node escrow.mjs deploy   # tUSDC + CommodexEscrow, once; operator = Commodex staging server wallet
+COMMODEX_FUJI_KEY_FILE=/path/key node escrow.mjs mint 0x<buyer> 1000
+node escrow.mjs status "<trade name or 0x trade id>"
+```
+
+`escrow.mjs deploy` refuses to run twice and writes to `evidence/fuji-escrow.json`, separate from the anchor evidence.
 
 Independent re-check of every transaction below, no install and no key:
 

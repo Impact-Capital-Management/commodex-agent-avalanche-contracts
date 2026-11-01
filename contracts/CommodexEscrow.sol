@@ -9,15 +9,24 @@ interface IERC20Minimal {
 }
 
 /// @title CommodexEscrow
-/// @notice Holds one buyer's stablecoin for one trade until delivery is confirmed, the buyer is
-///         refunded, the deadline passes, or an operator resolves a dispute. TESTNET ONLY: the
-///         single token is a test stablecoin on Avalanche Fuji. No FX, no partial releases.
+/// @notice Holds one buyer's stablecoin for one trade until the buyer confirms delivery, the
+///         seller refunds, or the operator (Commodex) acts. TESTNET ONLY: the single token is
+///         Circle's test USDC on Avalanche Fuji. No FX, no partial releases.
+/// @dev    v2 (2026-11-01, owner decisions):
+///         - The buyer releases, under operator supervision. The operator cannot release early.
+///         - If the buyer has not released by the deadline (7 days by default, set by the app),
+///           the operator may force the release to the seller (`forceRelease`).
+///         - A disputed trade is decided by the operator only. It never expires to either side.
+///         - Liveness backstop: if an undisputed trade is still funded OPERATOR_GRACE after its
+///           deadline (operator absent), anyone may return the funds to the buyer (`expire`).
+///         - Fee 0% on testnet (feeBps starts at 0; owner may set up to MAX_FEE_BPS).
 /// @dev    One escrow per `tradeId` (bytes32, the ledger's trade hash). Terminal states are final.
 ///         Pausing blocks new escrows only, so it can never trap funds in an open trade.
 ///         Fee-on-transfer tokens are rejected by a balance-delta check when funds come in.
 contract CommodexEscrow {
     enum Status { NONE, FUNDED, DISPUTED, RELEASED, REFUNDED }
     enum Reason { REFUND, EXPIRED, RESOLVED }
+    enum ReleaseBy { BUYER, OPERATOR_FORCED, OPERATOR_RESOLVED }
 
     struct Escrow {
         address buyer;
@@ -28,10 +37,12 @@ contract CommodexEscrow {
         Status status;
     }
 
-    uint256 public constant MAX_AMOUNT = 1_000_000e6;   // 1,000,000 tUSDC (6 decimals)
+    uint256 public constant MAX_AMOUNT = 1_000_000e6;   // 1,000,000 USDC (6 decimals)
     uint64 public constant MIN_WINDOW = 1 hours;
     uint64 public constant MAX_WINDOW = 30 days;
     uint16 public constant MAX_FEE_BPS = 300;           // 3%
+    uint64 public constant DEFAULT_WINDOW = 7 days;     // release window the app uses by default
+    uint64 public constant OPERATOR_GRACE = 30 days;    // after the deadline, before the buyer backstop opens
 
     IERC20Minimal public immutable token;
     address public owner;
@@ -48,6 +59,7 @@ contract CommodexEscrow {
     event EscrowFunded(bytes32 indexed tradeId, address indexed buyer, address indexed seller, uint256 amount, uint64 deadline);
     event EscrowReleased(bytes32 indexed tradeId, address indexed seller, uint256 amount, uint256 fee);
     event EscrowRefunded(bytes32 indexed tradeId, address indexed buyer, uint256 amount, Reason reason);
+    event EscrowReleasedBy(bytes32 indexed tradeId, ReleaseBy by);
     event EscrowDisputed(bytes32 indexed tradeId, address indexed by);
     event EscrowResolved(bytes32 indexed tradeId, bool toSeller);
     event OperatorSet(address indexed previous, address indexed next);
@@ -68,6 +80,7 @@ contract CommodexEscrow {
     error BadAmount();
     error BadDeadline();
     error NotExpired();
+    error DeadlineNotReached();
     error FeeTooHigh();
     error ContractPaused();
     error WrongStatus(Status current);
@@ -126,17 +139,21 @@ contract CommodexEscrow {
         emit EscrowFunded(tradeId, msg.sender, seller, amount, deadline);
     }
 
-    /// @notice Buyer (or operator) confirms delivery: pays the seller, minus the fee.
+    /// @notice Buyer confirms delivery: pays the seller, minus the fee. Buyer only.
     function release(bytes32 tradeId) external nonReentrant {
         Escrow storage e = escrows[tradeId];
         if (e.status != Status.FUNDED) revert WrongStatus(e.status);
-        if (msg.sender != e.buyer && msg.sender != operator) revert NotParty();
+        if (msg.sender != e.buyer) revert NotParty();
+        _paySeller(tradeId, e, ReleaseBy.BUYER);
+    }
 
-        e.status = Status.RELEASED;
-        (uint256 net, uint256 fee) = _split(e.amount);
-        _send(e.seller, net);
-        if (fee > 0) _send(feeRecipient, fee);
-        emit EscrowReleased(tradeId, e.seller, net, fee);
+    /// @notice Operator supervision: once the deadline has passed and the buyer has neither
+    ///         released nor disputed, the operator pays the seller. Not possible before the deadline.
+    function forceRelease(bytes32 tradeId) external nonReentrant onlyOperator {
+        Escrow storage e = escrows[tradeId];
+        if (e.status != Status.FUNDED) revert WrongStatus(e.status);
+        if (block.timestamp < e.deadline) revert DeadlineNotReached();
+        _paySeller(tradeId, e, ReleaseBy.OPERATOR_FORCED);
     }
 
     /// @notice Seller (or operator) returns the full amount to the buyer.
@@ -150,12 +167,13 @@ contract CommodexEscrow {
         emit EscrowRefunded(tradeId, e.buyer, e.amount, Reason.REFUND);
     }
 
-    /// @notice Anyone may call once the deadline has passed: the buyer gets the full amount back.
-    ///         Liveness guarantee, so buyer funds can never be locked forever.
+    /// @notice Liveness backstop only. Anyone may call on an undisputed trade that is still funded
+    ///         OPERATOR_GRACE after its deadline (the operator did not act): the buyer gets the full
+    ///         amount back. Disputed trades never expire; the operator must resolve them.
     function expire(bytes32 tradeId) external nonReentrant {
         Escrow storage e = escrows[tradeId];
-        if (e.status != Status.FUNDED && e.status != Status.DISPUTED) revert WrongStatus(e.status);
-        if (block.timestamp < e.deadline) revert NotExpired();
+        if (e.status != Status.FUNDED) revert WrongStatus(e.status);
+        if (block.timestamp < uint256(e.deadline) + OPERATOR_GRACE) revert NotExpired();
 
         e.status = Status.REFUNDED;
         _send(e.buyer, e.amount);
@@ -179,11 +197,7 @@ contract CommodexEscrow {
         if (e.status != Status.DISPUTED) revert WrongStatus(e.status);
 
         if (toSeller) {
-            e.status = Status.RELEASED;
-            (uint256 net, uint256 fee) = _split(e.amount);
-            _send(e.seller, net);
-            if (fee > 0) _send(feeRecipient, fee);
-            emit EscrowReleased(tradeId, e.seller, net, fee);
+            _paySeller(tradeId, e, ReleaseBy.OPERATOR_RESOLVED);
         } else {
             e.status = Status.REFUNDED;
             _send(e.buyer, e.amount);
@@ -194,7 +208,8 @@ contract CommodexEscrow {
 
     // ---------------------------------------------------------------- owner controls
 
-    /// @notice Stops new escrows only. Existing trades can always be released, refunded, expired or resolved.
+    /// @notice Stops new escrows only. Existing trades can always be released, force-released,
+    ///         refunded, resolved or (backstop) expired.
     function pause() external onlyOwner {
         paused = true;
         emit PauseSet(true);
@@ -237,6 +252,15 @@ contract CommodexEscrow {
     }
 
     // ---------------------------------------------------------------- internals
+
+    function _paySeller(bytes32 tradeId, Escrow storage e, ReleaseBy by) private {
+        e.status = Status.RELEASED;
+        (uint256 net, uint256 fee) = _split(e.amount);
+        _send(e.seller, net);
+        if (fee > 0) _send(feeRecipient, fee);
+        emit EscrowReleased(tradeId, e.seller, net, fee);
+        emit EscrowReleasedBy(tradeId, by);
+    }
 
     function _split(uint256 amount) private view returns (uint256 net, uint256 fee) {
         fee = (amount * feeBps) / 10_000;

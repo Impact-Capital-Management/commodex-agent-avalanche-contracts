@@ -1,0 +1,22 @@
+{
+  "network": "Avalanche Fuji C-Chain",
+  "chainId": 43113,
+  "testnetOnly": true,
+  "token": "0x5425890298aed601595a70AB815c96711a31Bc65",
+  "escrow": "0xe453ebae20f06d53c44946b15A35E0e790A3089e",
+  "deployer": "0xa6547c2812140c0495113d4490eb0f2805A67ecD",
+  "entries": [
+    {
+      "step": "deploy-escrow",
+      "txHash": "0xa97409ec2d65e404c6e40cee52b9db715556ba1050282f0c2727b2c1435ca293",
+      "block": 60366934,
+      "at": "2026-11-01T20:43:50.821Z",
+      "tx": "https://testnet.snowtrace.io/tx/0xa97409ec2d65e404c6e40cee52b9db715556ba1050282f0c2727b2c1435ca293",
+      "address": "https://testnet.snowtrace.io/address/0xe453ebae20f06d53c44946b15A35E0e790A3089e"
+    }
+  ],
+  "tokenKind": "Circle USDC (Fuji test)",
+  "contractVersion": "v2-2026-11-01 (buyer release, operator force release after deadline, operator-only dispute resolution, 30-day backstop)",
+  "operator": "0x215edFA8C9Db88A972FbEDb810b884ADe94fca7B",
+  "feeRecipient": "0xa6547c2812140c0495113d4490eb0f2805A67ecD"
+}

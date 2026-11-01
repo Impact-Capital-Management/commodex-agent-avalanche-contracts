@@ -16,15 +16,17 @@ Avalanche escrow contracts agent for the Commodex Avalanche C-Chain setup. Commo
 | FR scope | FR-03 |
 | Squad page | https://team.impactcapital.ltd/showcase/commodex/ |
 
-## Status — updated 29 October 2026
+## Status — updated 1 November 2026
 
-**CommodexAnchor v0 is deployed on Avalanche Fuji, source verified on the explorer, first hash anchored.**
+**Both contracts are deployed on Avalanche Fuji and source verified on the explorer.**
+CommodexAnchor v0 has anchored four hashes since 11 Oct 2026. CommodexEscrow v2 was deployed on 1 Nov 2026
+on Circle's test USDC. Full escrow specification: [`docs/escrow-spec.md`](docs/escrow-spec.md).
 
 | Contract | What it does | State |
 |---|---|---|
 | [`contracts/CommodexAnchor.sol`](contracts/CommodexAnchor.sol) | Stores a 32-byte hash and the block it was mined in; emits `Anchored`. No funds, no token, no personal data. Only the operator may anchor; one hash once. | Deployed 11 Oct 2026 at [`0xe274C452dFb0D259FA413EEd3a830197a4Fd50ef`](https://testnet.snowtrace.io/address/0xe274C452dFb0D259FA413EEd3a830197a4Fd50ef); 7/7 local tests |
-| [`contracts/CommodexEscrow.sol`](contracts/CommodexEscrow.sol) | Test-USDC escrow for one trade at a time: buyer funds, buyer or operator releases, seller or operator refunds, deadline refund for anyone, dispute frozen for the operator. Fee capped at 3%. Pause blocks new trades only. Rejects fee-on-transfer tokens. TESTNET ONLY. | Written and tested locally: 14/14 test groups on an in-memory chain. Not yet deployed to Fuji; the deploy runs with the owner's key ([`escrow.mjs`](escrow.mjs)). |
-| [`contracts/mocks/TestTokens.sol`](contracts/mocks/TestTokens.sol) | Test stablecoin `tUSDC` (6 decimals, owner mints test supply) plus two adversarial tokens used only in tests: one burns 1% per transfer, one calls back into the escrow mid-payout. | Test-only, no value |
+| [`contracts/CommodexEscrow.sol`](contracts/CommodexEscrow.sol) | USDC escrow for one trade at a time. The buyer funds and releases, under Commodex's supervision as operator: once the 7-day deadline passes without a release, the operator may force the release to the seller. The seller or operator refunds. Disputes are resolved by the operator only and never expire. A 30-day backstop after the deadline returns an untouched trade to the buyer. Fee 0% (capped at 3%). Pause blocks new trades only. Rejects fee-on-transfer tokens. TESTNET ONLY. | v2 deployed 1 Nov 2026 at [`0xe453ebae20f06d53c44946b15A35E0e790A3089e`](https://testnet.snowtrace.io/address/0xe453ebae20f06d53c44946b15A35E0e790A3089e) on Circle Fuji USDC; source verified; 16/16 local test groups |
+| [`contracts/mocks/TestTokens.sol`](contracts/mocks/TestTokens.sol) | Test stablecoin `tUSDC` (6 decimals, owner mints test supply) plus two adversarial tokens used only in tests: one burns 1% per transfer, one calls back into the escrow mid-payout. | Test-only, no value; the Fuji escrow uses Circle's test USDC instead |
 
 ## Run
 
@@ -40,12 +42,15 @@ node anchor.mjs check "<text or 0x hash>"
 Escrow (testnet only):
 
 ```bash
-npm run test:escrow                        # 14 test groups on an in-memory chain, no Fuji funds
+npm run test:escrow                        # 16 test groups on an in-memory chain, no Fuji funds
 npm run test:all                           # anchor + escrow
-COMMODEX_FUJI_KEY_FILE=/path/key node escrow.mjs deploy   # tUSDC + CommodexEscrow, once; operator = Commodex staging server wallet
-COMMODEX_FUJI_KEY_FILE=/path/key node escrow.mjs mint 0x<buyer> 1000
+COMMODEX_FUJI_KEY_FILE=/path/key node escrow.mjs deploy   # CommodexEscrow on Circle Fuji USDC, once; operator = Commodex staging server wallet
+COMMODEX_FUJI_KEY_FILE=/path/key node escrow.mjs token    # USDC balance of the key, sends nothing
+COMMODEX_FUJI_KEY_FILE=/path/key node escrow.mjs demo 1   # key = buyer: approve, fund a 7-day trade, release (test USDC from https://faucet.circle.com/)
 node escrow.mjs status "<trade name or 0x trade id>"
 ```
+
+`ESCROW_TOKEN=mock node escrow.mjs deploy` keeps the earlier path that deploys our own `tUSDC` first.
 
 `escrow.mjs deploy` refuses to run twice and writes to `evidence/fuji-escrow.json`, separate from the anchor evidence.
 
@@ -81,6 +86,20 @@ Raw record: [`evidence/fuji-evidence.json`](evidence/fuji-evidence.json).
 
 Check it yourself: `node anchor.mjs check "commodex-m0-2026-10"` prints `anchored in block 59306896`. The deploy
 transaction's input is byte-for-byte the bytecode in [`build/CommodexAnchor.json`](build/CommodexAnchor.json).
+
+## Escrow evidence
+
+Raw record: [`evidence/fuji-escrow.json`](evidence/fuji-escrow.json).
+
+| Date (UTC) | Step | Block | Explorer |
+|---|---|---|---|
+| 2026-11-01 20:43 | Deploy CommodexEscrow v2 (token Circle Fuji USDC `0x5425890298aed601595a70AB815c96711a31Bc65`, operator `0x215edFA8C9Db88A972FbEDb810b884ADe94fca7B`, fee 0) | 60366934 | https://testnet.snowtrace.io/tx/0xa97409ec2d65e404c6e40cee52b9db715556ba1050282f0c2727b2c1435ca293 |
+| 2026-11-01 | Source verified on the explorer (solc 0.8.24, optimizer 200, EVM paris) | — | https://testnet.snowtrace.io/address/0xe453ebae20f06d53c44946b15A35E0e790A3089e/contract/43113/code |
+
+Read back from the chain on 1 Nov 2026: `token()` = Circle Fuji USDC, `operator()` = the Commodex server wallet,
+`feeBps()` = 0, `DEFAULT_WINDOW()` = 604800 s (7 days), `OPERATOR_GRACE()` = 2592000 s (30 days), `paused()` = false.
+
+The first trade lifecycle on Fuji (fund, then release by the buyer) is recorded here once test USDC is in the deployer wallet.
 
 ## License
 

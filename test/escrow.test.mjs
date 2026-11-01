@@ -145,24 +145,42 @@ const bal = (env, s) => env.token.balanceOf(s);
 
   const id3 = tid('release-operator');
   await fund(env, id3);
-  await (await env.esc(operator).release(id3)).wait();
-  assert.equal(await status(env, id3), 3);
-  ok('refund by seller or operator returns full amount; stranger refused; operator can release');
+  await assert.rejects(env.esc(operator).release(id3), /NotParty|revert/);
+  await assert.rejects(env.esc(seller).release(id3), /NotParty|revert/);
+  assert.equal(await status(env, id3), 1);
+  ok('refund by seller or operator returns full amount; stranger refused; only the buyer can release');
 }
 
-// ---- 5. expiry: refused before deadline, anyone may expire after
+// ---- 5. operator force release: refused before deadline, allowed after; only operator
+{
+  const env = await fresh();
+  const id = tid('force');
+  await fund(env, id, 50n * ONE, DAY);
+  await assert.rejects(env.esc(operator).forceRelease(id), /DeadlineNotReached|revert/);
+  await warp(2 * DAY);
+  // Explicit gasLimit: ganache estimates gas on a pending block that ignores evm_increaseTime.
+  await assert.rejects(env.esc(stranger).forceRelease(id, { gasLimit: 500_000 }).then((tx) => tx.wait()), /NotOperator|revert/);
+  await assert.rejects(env.esc(buyer).forceRelease(id, { gasLimit: 500_000 }).then((tx) => tx.wait()), /NotOperator|revert/);
+  await (await env.esc(operator).forceRelease(id, { gasLimit: 500_000 })).wait();
+  assert.equal(await bal(env, await addr(seller)), 50n * ONE);
+  assert.equal(await status(env, id), 3);
+  ok('force release: operator only, only after the deadline, seller paid');
+}
+
+// ---- 5b. buyer backstop: expire only OPERATOR_GRACE after deadline, undisputed only
 {
   const env = await fresh();
   const id = tid('expiry');
   await fund(env, id, 50n * ONE, DAY);
   await assert.rejects(env.esc(stranger).expire(id), /NotExpired|revert/);
   await warp(2 * DAY);
+  await assert.rejects(env.esc(stranger).expire(id, { gasLimit: 500_000 }).then((tx) => tx.wait()), /NotExpired|revert/);
+  await warp(30 * DAY);
   const buyerBefore = await bal(env, await addr(buyer));
-  // Explicit gasLimit: ganache estimates gas on a pending block that ignores evm_increaseTime.
   await (await env.esc(stranger).expire(id, { gasLimit: 500_000 })).wait();
   assert.equal(await bal(env, await addr(buyer)), buyerBefore + 50n * ONE);
   assert.equal(await status(env, id), 4);
-  ok('expiry: refused before deadline, stranger can expire after, buyer refunded');
+  ok('backstop: refused until 30 days after the deadline, then anyone returns funds to buyer');
 }
 
 // ---- 6. dispute flow
@@ -194,17 +212,30 @@ const bal = (env, s) => env.token.balanceOf(s);
   ok('dispute: frozen against release/refund, operator resolves either way, third parties refused');
 }
 
-// ---- 7. expiry is allowed on a disputed trade (per spec); documents the behaviour
+// ---- 7. a disputed trade never expires and cannot be force-released: operator must resolve
 {
   const env = await fresh();
   const id = tid('dispute-then-expire');
   await fund(env, id, 40n * ONE, DAY);
   await (await env.esc(seller).dispute(id)).wait();
-  await warp(2 * DAY);
-  await (await env.esc(stranger).expire(id, { gasLimit: 500_000 })).wait();
+  await warp(40 * DAY);
+  await assert.rejects(env.esc(stranger).expire(id, { gasLimit: 500_000 }).then((tx) => tx.wait()), /WrongStatus|revert/);
+  await assert.rejects(env.esc(operator).forceRelease(id, { gasLimit: 500_000 }).then((tx) => tx.wait()), /WrongStatus|revert/);
+  assert.equal(await status(env, id), 2);
+  await (await env.esc(operator).resolve(id, false, { gasLimit: 500_000 })).wait();
   assert.equal(await status(env, id), 4);
   assert.equal(await bal(env, await addr(buyer)), 10_000n * ONE);
-  ok('disputed trade still expires after its deadline (spec: dispute does not block expiry)');
+  ok('disputed trade: no expiry, no force release; operator resolve is the only exit');
+}
+
+// ---- 7b. 7-day default window is accepted
+{
+  const env = await fresh();
+  assert.equal(await env.escrow.DEFAULT_WINDOW(), BigInt(7 * DAY));
+  const id = tid('seven-days');
+  await fund(env, id, ONE, 7 * DAY);
+  assert.equal(await status(env, id), 1);
+  ok('7-day default window constant and funding with it');
 }
 
 // ---- 8. duplicate trade id, input limits
@@ -309,5 +340,5 @@ const bal = (env, s) => env.token.balanceOf(s);
   ok('released trade cannot be released, refunded, disputed or reused');
 }
 
-console.log(`\n${passed}/14 groups passed`);
+console.log(`\n${passed}/16 groups passed`);
 child.kill();

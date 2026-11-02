@@ -13,6 +13,37 @@
       "at": "2026-11-01T20:43:50.821Z",
       "tx": "https://testnet.snowtrace.io/tx/0xa97409ec2d65e404c6e40cee52b9db715556ba1050282f0c2727b2c1435ca293",
       "address": "https://testnet.snowtrace.io/address/0xe453ebae20f06d53c44946b15A35E0e790A3089e"
+    },
+    {
+      "step": "demo-approve",
+      "tradeId": "0x96399d96379d44e33173ac6aa2d9ceeb36d40779a8cf10bd75676bfcd5966983",
+      "txHash": "0x4b09b23075d24f893534be4ecd54a462f12fdaea7a27957e239ae7bb719ce55b",
+      "block": 60383091,
+      "at": "2026-11-02T04:38:20.390Z",
+      "tx": "https://testnet.snowtrace.io/tx/0x4b09b23075d24f893534be4ecd54a462f12fdaea7a27957e239ae7bb719ce55b",
+      "amount": "1"
+    },
+    {
+      "step": "demo-fund",
+      "tradeId": "0x96399d96379d44e33173ac6aa2d9ceeb36d40779a8cf10bd75676bfcd5966983",
+      "txHash": "0x68fe1c6fade7af222b4aa99363c8d7eb52d578ac63242733de14c43d4359d519",
+      "block": 60383092,
+      "at": "2026-11-02T04:38:24.884Z",
+      "tx": "https://testnet.snowtrace.io/tx/0x68fe1c6fade7af222b4aa99363c8d7eb52d578ac63242733de14c43d4359d519",
+      "amount": "1",
+      "buyer": "0xa6547c2812140c0495113d4490eb0f2805A67ecD",
+      "seller": "0x215edFA8C9Db88A972FbEDb810b884ADe94fca7B",
+      "deadline": 1794199095,
+      "label": "demo-2026-11-02T04:38:15.729Z"
+    },
+    {
+      "step": "demo-release-by-buyer",
+      "tradeId": "0x96399d96379d44e33173ac6aa2d9ceeb36d40779a8cf10bd75676bfcd5966983",
+      "txHash": "0xa69f086729fcd392e3e5d29989aa561a7135f44e3bee290813ef4405e25da9c9",
+      "block": 60383096,
+      "at": "2026-11-02T04:38:33.491Z",
+      "tx": "https://testnet.snowtrace.io/tx/0xa69f086729fcd392e3e5d29989aa561a7135f44e3bee290813ef4405e25da9c9",
+      "seller": "0x215edFA8C9Db88A972FbEDb810b884ADe94fca7B"
     }
   ],
   "tokenKind": "Circle USDC (Fuji test)",

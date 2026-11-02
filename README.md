@@ -93,13 +93,18 @@ Raw record: [`evidence/fuji-escrow.json`](evidence/fuji-escrow.json).
 
 | Date (UTC) | Step | Block | Explorer |
 |---|---|---|---|
+| 2026-11-02 | Buyer releases 1 USDC to the seller: trade `RELEASED` | 60383096 | https://testnet.snowtrace.io/tx/0xa69f086729fcd392e3e5d29989aa561a7135f44e3bee290813ef4405e25da9c9 |
+| 2026-11-02 | Buyer funds trade `0x96399d96…` with 1 USDC, 7-day deadline | 60383092 | https://testnet.snowtrace.io/tx/0x68fe1c6fade7af222b4aa99363c8d7eb52d578ac63242733de14c43d4359d519 |
+| 2026-11-02 | Buyer approves the escrow to pull 1 USDC | 60383091 | https://testnet.snowtrace.io/tx/0x4b09b23075d24f893534be4ecd54a462f12fdaea7a27957e239ae7bb719ce55b |
 | 2026-11-01 20:43 | Deploy CommodexEscrow v2 (token Circle Fuji USDC `0x5425890298aed601595a70AB815c96711a31Bc65`, operator `0x215edFA8C9Db88A972FbEDb810b884ADe94fca7B`, fee 0) | 60366934 | https://testnet.snowtrace.io/tx/0xa97409ec2d65e404c6e40cee52b9db715556ba1050282f0c2727b2c1435ca293 |
 | 2026-11-01 | Source verified on the explorer (solc 0.8.24, optimizer 200, EVM paris) | — | https://testnet.snowtrace.io/address/0xe453ebae20f06d53c44946b15A35E0e790A3089e/contract/43113/code |
 
 Read back from the chain on 1 Nov 2026: `token()` = Circle Fuji USDC, `operator()` = the Commodex server wallet,
 `feeBps()` = 0, `DEFAULT_WINDOW()` = 604800 s (7 days), `OPERATOR_GRACE()` = 2592000 s (30 days), `paused()` = false.
 
-The first trade lifecycle on Fuji (fund, then release by the buyer) is recorded here once test USDC is in the deployer wallet.
+First trade lifecycle on Fuji (2 Nov 2026): the deployer wallet acts as buyer with Circle faucet USDC, funds
+trade `0x96399d96379d44e33173ac6aa2d9ceeb36d40779a8cf10bd75676bfcd5966983` and releases it. In this demonstration the seller is a stand-in, the Commodex operator
+wallet; no real counterparty is involved. `node escrow.mjs status 0x96399d96379d44e33173ac6aa2d9ceeb36d40779a8cf10bd75676bfcd5966983` prints `RELEASED`.
 
 ## License
 

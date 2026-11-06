@@ -8,7 +8,8 @@
 //   node escrow.mjs token                        (USDC balance of the key, sends nothing)
 //   node escrow.mjs mint <0x address> <amount>   (owner mints test tUSDC, amount in whole tUSDC)
 //   node escrow.mjs status <tradeId>             (reads the escrow record, sends nothing)
-//   node escrow.mjs demo <amount> [seller]       (key = buyer: approve, fund a 7-day trade, release;
+//   node escrow.mjs demo <amount> [seller]       (key = buyer, COMMODEX_OPERATOR_KEY_FILE = operator signs the
+//                                                 terms; approve, fund a 7-day trade, release;
 //                                                 needs Circle test USDC from https://faucet.circle.com/)
 //
 // The signer key is read from the file named by COMMODEX_FUJI_KEY_FILE (one line, the Fuji
@@ -110,7 +111,13 @@ async function whoami() {
 
 async function deploy() {
   const e = evidence();
-  if (e.escrow) throw new Error(`Escrow already deployed at ${e.escrow} (evidence/fuji-escrow.json). Refusing to deploy a second one.`);
+  if (e.escrow && String(e.contractVersion || '').startsWith('v3')) throw new Error(`Escrow v3 already deployed at ${e.escrow} (evidence/fuji-escrow.json). Refusing to deploy a second one.`);
+  if (e.escrow) {
+    // v2 (no operator authorization on funding) is retired: keep its record, deploy v3 beside it.
+    const { previous = [], ...v2 } = e;
+    e.previous = [...previous, { contractVersion: v2.contractVersion || 'v2-2026-11-01', escrow: v2.escrow, token: v2.token, deployer: v2.deployer, operator: v2.operator ?? null, entries: v2.entries }];
+    e.entries = [];
+  }
   const a = artifact();
   const w = await signer();
   const operator = ethers.getAddress(process.env.ESCROW_OPERATOR || DEFAULT_OPERATOR);
@@ -147,7 +154,7 @@ async function deploy() {
   const now = new Date().toISOString();
   e.token = tokenAddress;
   e.tokenKind = useMock ? 'tUSDC (Commodex mock)' : 'Circle USDC (Fuji test)';
-  e.contractVersion = 'v2-2026-11-01 (buyer release, operator force release after deadline, operator-only dispute resolution, 30-day backstop)';
+  e.contractVersion = 'v3-2026-11-06 (v2 rules + operator EIP-712 authorization of every escrow, fee fixed at funding)';
   e.escrow = escrowAddress;
   e.deployer = w.address;
   e.operator = operator;
@@ -205,7 +212,18 @@ async function demo(amount = '1', sellerArg) {
     console.log(`${step}: block ${rc.blockNumber}  ${EXPLORER}/tx/${tx.hash}`);
   };
   await record('demo-approve', await token.approve(e.escrow, units), { amount: String(amount) });
-  await record('demo-fund', await escrow.createAndFund(tradeId, seller, units, deadline), { amount: String(amount), buyer: w.address, seller, deadline: Number(deadline), label });
+  // v3: the operator authorizes the exact terms. The operator key file stays on this machine; only the signature is used.
+  const opFile = process.env.COMMODEX_OPERATOR_KEY_FILE;
+  if (!opFile) throw new Error('Set COMMODEX_OPERATOR_KEY_FILE to the escrow operator key file: v3 needs its signature on every new escrow.');
+  const op = walletFromFile(opFile);
+  const contractOperator = await escrow.operator();
+  if (op.address !== contractOperator) throw new Error(`COMMODEX_OPERATOR_KEY_FILE belongs to ${op.address}, but the escrow operator is ${contractOperator}.`);
+  const operatorSig = await op.signTypedData(
+    { name: 'CommodexEscrow', version: '3', chainId: CHAIN_ID, verifyingContract: e.escrow },
+    { Fund: [{ name: 'tradeId', type: 'bytes32' }, { name: 'buyer', type: 'address' }, { name: 'seller', type: 'address' }, { name: 'amount', type: 'uint256' }, { name: 'deadline', type: 'uint64' }] },
+    { tradeId, buyer: w.address, seller, amount: units, deadline },
+  );
+  await record('demo-fund', await escrow.createAndFund(tradeId, seller, units, deadline, operatorSig), { amount: String(amount), buyer: w.address, seller, deadline: Number(deadline), label });
   await record('demo-release-by-buyer', await escrow.release(tradeId), { seller });
   const r = await escrow.escrows(tradeId);
   console.log(`trade ${tradeId} status ${['NONE', 'FUNDED', 'DISPUTED', 'RELEASED', 'REFUNDED'][Number(r.status)]}`);

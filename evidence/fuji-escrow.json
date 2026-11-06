@@ -3,51 +3,79 @@
   "chainId": 43113,
   "testnetOnly": true,
   "token": "0x5425890298aed601595a70AB815c96711a31Bc65",
-  "escrow": "0xe453ebae20f06d53c44946b15A35E0e790A3089e",
+  "escrow": "0x9B8691C642d9caB3A1299b10EF24ed5dc74b6432",
   "deployer": "0xa6547c2812140c0495113d4490eb0f2805A67ecD",
   "entries": [
     {
       "step": "deploy-escrow",
-      "txHash": "0xa97409ec2d65e404c6e40cee52b9db715556ba1050282f0c2727b2c1435ca293",
-      "block": 60366934,
-      "at": "2026-11-01T20:43:50.821Z",
-      "tx": "https://testnet.snowtrace.io/tx/0xa97409ec2d65e404c6e40cee52b9db715556ba1050282f0c2727b2c1435ca293",
-      "address": "https://testnet.snowtrace.io/address/0xe453ebae20f06d53c44946b15A35E0e790A3089e"
-    },
-    {
-      "step": "demo-approve",
-      "tradeId": "0x96399d96379d44e33173ac6aa2d9ceeb36d40779a8cf10bd75676bfcd5966983",
-      "txHash": "0x4b09b23075d24f893534be4ecd54a462f12fdaea7a27957e239ae7bb719ce55b",
-      "block": 60383091,
-      "at": "2026-11-02T04:38:20.390Z",
-      "tx": "https://testnet.snowtrace.io/tx/0x4b09b23075d24f893534be4ecd54a462f12fdaea7a27957e239ae7bb719ce55b",
-      "amount": "1"
-    },
-    {
-      "step": "demo-fund",
-      "tradeId": "0x96399d96379d44e33173ac6aa2d9ceeb36d40779a8cf10bd75676bfcd5966983",
-      "txHash": "0x68fe1c6fade7af222b4aa99363c8d7eb52d578ac63242733de14c43d4359d519",
-      "block": 60383092,
-      "at": "2026-11-02T04:38:24.884Z",
-      "tx": "https://testnet.snowtrace.io/tx/0x68fe1c6fade7af222b4aa99363c8d7eb52d578ac63242733de14c43d4359d519",
-      "amount": "1",
-      "buyer": "0xa6547c2812140c0495113d4490eb0f2805A67ecD",
-      "seller": "0x215edFA8C9Db88A972FbEDb810b884ADe94fca7B",
-      "deadline": 1794199095,
-      "label": "demo-2026-11-02T04:38:15.729Z"
-    },
-    {
-      "step": "demo-release-by-buyer",
-      "tradeId": "0x96399d96379d44e33173ac6aa2d9ceeb36d40779a8cf10bd75676bfcd5966983",
-      "txHash": "0xa69f086729fcd392e3e5d29989aa561a7135f44e3bee290813ef4405e25da9c9",
-      "block": 60383096,
-      "at": "2026-11-02T04:38:33.491Z",
-      "tx": "https://testnet.snowtrace.io/tx/0xa69f086729fcd392e3e5d29989aa561a7135f44e3bee290813ef4405e25da9c9",
-      "seller": "0x215edFA8C9Db88A972FbEDb810b884ADe94fca7B"
+      "txHash": "0x306726b359bb198368839f7d991249e5c9a81e14d750208cedf3135243294293",
+      "block": 60644849,
+      "at": "2026-11-06T20:10:03.489Z",
+      "tx": "https://testnet.snowtrace.io/tx/0x306726b359bb198368839f7d991249e5c9a81e14d750208cedf3135243294293",
+      "address": "https://testnet.snowtrace.io/address/0x9B8691C642d9caB3A1299b10EF24ed5dc74b6432"
     }
   ],
   "tokenKind": "Circle USDC (Fuji test)",
-  "contractVersion": "v2-2026-11-01 (buyer release, operator force release after deadline, operator-only dispute resolution, 30-day backstop)",
+  "contractVersion": "v3-2026-11-06 (v2 rules + operator EIP-712 authorization of every escrow, fee fixed at funding)",
   "operator": "0x215edFA8C9Db88A972FbEDb810b884ADe94fca7B",
-  "feeRecipient": "0xa6547c2812140c0495113d4490eb0f2805A67ecD"
+  "feeRecipient": "0xa6547c2812140c0495113d4490eb0f2805A67ecD",
+  "previous": [
+    {
+      "contractVersion": "v2-2026-11-01 (buyer release, operator force release after deadline, operator-only dispute resolution, 30-day backstop)",
+      "escrow": "0xe453ebae20f06d53c44946b15A35E0e790A3089e",
+      "token": "0x5425890298aed601595a70AB815c96711a31Bc65",
+      "deployer": "0xa6547c2812140c0495113d4490eb0f2805A67ecD",
+      "operator": "0x215edFA8C9Db88A972FbEDb810b884ADe94fca7B",
+      "entries": [
+        {
+          "step": "deploy-escrow",
+          "txHash": "0xa97409ec2d65e404c6e40cee52b9db715556ba1050282f0c2727b2c1435ca293",
+          "block": 60366934,
+          "at": "2026-11-01T20:43:50.821Z",
+          "tx": "https://testnet.snowtrace.io/tx/0xa97409ec2d65e404c6e40cee52b9db715556ba1050282f0c2727b2c1435ca293",
+          "address": "https://testnet.snowtrace.io/address/0xe453ebae20f06d53c44946b15A35E0e790A3089e"
+        },
+        {
+          "step": "demo-approve",
+          "tradeId": "0x96399d96379d44e33173ac6aa2d9ceeb36d40779a8cf10bd75676bfcd5966983",
+          "txHash": "0x4b09b23075d24f893534be4ecd54a462f12fdaea7a27957e239ae7bb719ce55b",
+          "block": 60383091,
+          "at": "2026-11-02T04:38:20.390Z",
+          "tx": "https://testnet.snowtrace.io/tx/0x4b09b23075d24f893534be4ecd54a462f12fdaea7a27957e239ae7bb719ce55b",
+          "amount": "1"
+        },
+        {
+          "step": "demo-fund",
+          "tradeId": "0x96399d96379d44e33173ac6aa2d9ceeb36d40779a8cf10bd75676bfcd5966983",
+          "txHash": "0x68fe1c6fade7af222b4aa99363c8d7eb52d578ac63242733de14c43d4359d519",
+          "block": 60383092,
+          "at": "2026-11-02T04:38:24.884Z",
+          "tx": "https://testnet.snowtrace.io/tx/0x68fe1c6fade7af222b4aa99363c8d7eb52d578ac63242733de14c43d4359d519",
+          "amount": "1",
+          "buyer": "0xa6547c2812140c0495113d4490eb0f2805A67ecD",
+          "seller": "0x215edFA8C9Db88A972FbEDb810b884ADe94fca7B",
+          "deadline": 1794199095,
+          "label": "demo-2026-11-02T04:38:15.729Z"
+        },
+        {
+          "step": "demo-release-by-buyer",
+          "tradeId": "0x96399d96379d44e33173ac6aa2d9ceeb36d40779a8cf10bd75676bfcd5966983",
+          "txHash": "0xa69f086729fcd392e3e5d29989aa561a7135f44e3bee290813ef4405e25da9c9",
+          "block": 60383096,
+          "at": "2026-11-02T04:38:33.491Z",
+          "tx": "https://testnet.snowtrace.io/tx/0xa69f086729fcd392e3e5d29989aa561a7135f44e3bee290813ef4405e25da9c9",
+          "seller": "0x215edFA8C9Db88A972FbEDb810b884ADe94fca7B"
+        },
+        {
+          "step": "pause-v2",
+          "txHash": "0x9065c427333564768e524ea91cb279ad82d942c5032e4a470a31f3c6fa3f0f8d",
+          "block": 60644883,
+          "at": "2026-11-06T20:11Z",
+          "tx": "https://testnet.snowtrace.io/tx/0x9065c427333564768e524ea91cb279ad82d942c5032e4a470a31f3c6fa3f0f8d",
+          "note": "v2 retired: new escrows blocked; its only trade 0x96399d96...5966983 was already RELEASED, nothing left to settle"
+        }
+      ],
+      "retired": "2026-11-06 (paused after the KupiaSec finding; replaced by v3)"
+    }
+  ]
 }

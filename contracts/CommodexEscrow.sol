@@ -20,6 +20,12 @@ interface IERC20Minimal {
 ///         - Liveness backstop: if an undisputed trade is still funded OPERATOR_GRACE after its
 ///           deadline (operator absent), anyone may return the funds to the buyer (`expire`).
 ///         - Fee 0% on testnet (feeBps starts at 0; owner may set up to MAX_FEE_BPS).
+/// @dev    v3 (2026-11-06, security fix):
+///         - Every escrow needs an EIP-712 authorization signed by the operator over the full terms
+///           (tradeId, buyer, seller, amount, deadline). A third party who sees or predicts a trade id
+///           can no longer claim it with its own seller and amount, and every EscrowFunded event
+///           matches terms the Commodex ledger approved.
+///         - The fee rate is fixed when a trade is funded. A later setFee only affects new trades.
 /// @dev    One escrow per `tradeId` (bytes32, the ledger's trade hash). Terminal states are final.
 ///         Pausing blocks new escrows only, so it can never trap funds in an open trade.
 ///         Fee-on-transfer tokens are rejected by a balance-delta check when funds come in.
@@ -34,6 +40,7 @@ contract CommodexEscrow {
         uint256 amount;
         uint64 deadline;
         uint64 createdAt;
+        uint16 feeBps;      // fee rate locked in at funding
         Status status;
     }
 
@@ -43,6 +50,15 @@ contract CommodexEscrow {
     uint16 public constant MAX_FEE_BPS = 300;           // 3%
     uint64 public constant DEFAULT_WINDOW = 7 days;     // release window the app uses by default
     uint64 public constant OPERATOR_GRACE = 30 days;    // after the deadline, before the buyer backstop opens
+
+    bytes32 public constant FUND_TYPEHASH =
+        keccak256("Fund(bytes32 tradeId,address buyer,address seller,uint256 amount,uint64 deadline)");
+    bytes32 private constant DOMAIN_TYPEHASH =
+        keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
+    bytes32 private constant NAME_HASH = keccak256("CommodexEscrow");
+    bytes32 private constant VERSION_HASH = keccak256("3");
+    // secp256k1n / 2: a signature with a higher s is a malleable copy and is refused.
+    uint256 private constant HALF_N = 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0;
 
     IERC20Minimal public immutable token;
     address public owner;
@@ -87,6 +103,7 @@ contract CommodexEscrow {
     error TransferFailed();
     error FeeOnTransfer(uint256 expected, uint256 received);
     error Reentrancy();
+    error BadAuthorization();
 
     modifier onlyOwner() {
         if (msg.sender != owner) revert NotOwner();
@@ -118,7 +135,13 @@ contract CommodexEscrow {
     // ---------------------------------------------------------------- trade lifecycle
 
     /// @notice Buyer locks `amount` for `seller`. Buyer must have approved this contract first.
-    function createAndFund(bytes32 tradeId, address seller, uint256 amount, uint64 deadline) external nonReentrant {
+    /// @param  operatorSig 65-byte EIP-712 signature by the current operator over
+    ///         Fund(tradeId, buyer = msg.sender, seller, amount, deadline). The Commodex ledger issues
+    ///         it for the trade; without it nobody can open an escrow under that trade id.
+    function createAndFund(bytes32 tradeId, address seller, uint256 amount, uint64 deadline, bytes calldata operatorSig)
+        external
+        nonReentrant
+    {
         if (paused) revert ContractPaused();
         if (tradeId == bytes32(0)) revert ZeroTrade();
         Escrow storage e = escrows[tradeId];
@@ -127,12 +150,16 @@ contract CommodexEscrow {
         if (seller == msg.sender) revert SellerIsBuyer();
         if (amount == 0 || amount > MAX_AMOUNT) revert BadAmount();
         if (deadline < block.timestamp + MIN_WINDOW || deadline > block.timestamp + MAX_WINDOW) revert BadDeadline();
+        if (_signer(fundDigest(tradeId, msg.sender, seller, amount, deadline), operatorSig) != operator) {
+            revert BadAuthorization();
+        }
 
         e.buyer = msg.sender;
         e.seller = seller;
         e.amount = amount;
         e.deadline = deadline;
         e.createdAt = uint64(block.timestamp);
+        e.feeBps = feeBps;
         e.status = Status.FUNDED;
 
         _pullExact(msg.sender, amount);
@@ -206,6 +233,22 @@ contract CommodexEscrow {
         emit EscrowResolved(tradeId, toSeller);
     }
 
+    // ---------------------------------------------------------------- authorization
+
+    function domainSeparator() public view returns (bytes32) {
+        return keccak256(abi.encode(DOMAIN_TYPEHASH, NAME_HASH, VERSION_HASH, block.chainid, address(this)));
+    }
+
+    /// @notice The EIP-712 digest the operator signs to authorize one escrow.
+    function fundDigest(bytes32 tradeId, address buyer, address seller, uint256 amount, uint64 deadline)
+        public
+        view
+        returns (bytes32)
+    {
+        bytes32 structHash = keccak256(abi.encode(FUND_TYPEHASH, tradeId, buyer, seller, amount, deadline));
+        return keccak256(abi.encodePacked("\x19\x01", domainSeparator(), structHash));
+    }
+
     // ---------------------------------------------------------------- owner controls
 
     /// @notice Stops new escrows only. Existing trades can always be released, force-released,
@@ -255,16 +298,23 @@ contract CommodexEscrow {
 
     function _paySeller(bytes32 tradeId, Escrow storage e, ReleaseBy by) private {
         e.status = Status.RELEASED;
-        (uint256 net, uint256 fee) = _split(e.amount);
+        uint256 fee = (e.amount * e.feeBps) / 10_000;
+        uint256 net = e.amount - fee;
         _send(e.seller, net);
         if (fee > 0) _send(feeRecipient, fee);
         emit EscrowReleased(tradeId, e.seller, net, fee);
         emit EscrowReleasedBy(tradeId, by);
     }
 
-    function _split(uint256 amount) private view returns (uint256 net, uint256 fee) {
-        fee = (amount * feeBps) / 10_000;
-        net = amount - fee;
+    /// @dev Recovers the signer of a 65-byte (r, s, v) signature. Returns address(0) for a malformed
+    ///      or malleable signature, which never matches the (non-zero) operator.
+    function _signer(bytes32 digest, bytes calldata sig) private pure returns (address) {
+        if (sig.length != 65) return address(0);
+        bytes32 r = bytes32(sig[0:32]);
+        bytes32 s = bytes32(sig[32:64]);
+        uint8 v = uint8(sig[64]);
+        if (uint256(s) > HALF_N || (v != 27 && v != 28)) return address(0);
+        return ecrecover(digest, v, r, s);
     }
 
     /// @dev Pulls `amount` and checks the escrow actually received it (rejects fee-on-transfer tokens).

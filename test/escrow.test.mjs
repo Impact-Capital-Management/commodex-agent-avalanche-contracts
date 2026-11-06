@@ -31,7 +31,7 @@ const tid = (name) => ethers.id(`trade-${name}`);
 const PORT = 8555;
 const RPC_URL = `http://127.0.0.1:${PORT}`;
 const ganacheCli = join(root, 'node_modules', 'ganache', 'dist', 'node', 'cli.js');
-const child = spawn(process.execPath, [ganacheCli, '--chain.chainId', '43113', '--server.port', String(PORT), '--wallet.totalAccounts', '6', '--logging.quiet'], { stdio: 'ignore' });
+const child = spawn(process.execPath, [ganacheCli, '--chain.chainId', '43113', '--server.port', String(PORT), '--wallet.totalAccounts', '6', '--wallet.deterministic', '--logging.quiet'], { stdio: 'ignore' });
 for (let i = 0; ; i += 1) {
   try {
     await fetch(RPC_URL, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_chainId', params: [] }) });
@@ -78,9 +78,33 @@ async function fresh(tokenName = 'MockUSDC') {
   return { token, escrow, esc: (s) => escrow.connect(s), tok: (s) => token.connect(s) };
 }
 
+// v3: the operator signs the full terms of each escrow (EIP-712) before the buyer can fund it.
+const FUND_TYPES = { Fund: [
+  { name: 'tradeId', type: 'bytes32' }, { name: 'buyer', type: 'address' }, { name: 'seller', type: 'address' },
+  { name: 'amount', type: 'uint256' }, { name: 'deadline', type: 'uint64' },
+] };
+// Ganache 7 cannot sign typed data over RPC, so sign locally with the same keys: ganache runs with
+// --wallet.deterministic, whose accounts come from this public test mnemonic (as the server wallet
+// signs offline in the app).
+const GANACHE_MNEMONIC = 'myth like bonus scare over problem client lizard pioneer submit female collect';
+const localKeys = new Map([0, 1, 2, 3, 4, 5].map((i) => {
+  const w = ethers.HDNodeWallet.fromPhrase(GANACHE_MNEMONIC, undefined, `m/44'/60'/0'/0/${i}`);
+  return [w.address.toLowerCase(), w];
+}));
+async function authorize(env, terms, signerOf = operator) {
+  const domain = { name: 'CommodexEscrow', version: '3', chainId: 43113, verifyingContract: await env.escrow.getAddress() };
+  const key = localKeys.get((await addr(signerOf)).toLowerCase());
+  assert.ok(key, 'ganache account key not found: is --wallet.deterministic set?');
+  return key.signTypedData(domain, FUND_TYPES, terms);
+}
+async function createAndFund(env, from, id, sellerAddr, amount, deadline, sig) {
+  const terms = { tradeId: id, buyer: await addr(from), seller: sellerAddr, amount, deadline };
+  return env.esc(from).createAndFund(id, sellerAddr, amount, deadline, sig ?? await authorize(env, terms));
+}
+
 async function fund(env, id, amount = 100n * ONE, window = DAY) {
   const deadline = (await now()) + BigInt(window);
-  await (await env.esc(buyer).createAndFund(id, await addr(seller), amount, deadline)).wait();
+  await (await createAndFund(env, buyer, id, await addr(seller), amount, deadline)).wait();
   return deadline;
 }
 
@@ -257,7 +281,7 @@ const bal = (env, s) => env.token.balanceOf(s);
     ['zero trade id', ethers.ZeroHash, s, ONE, now0 + BigInt(DAY)],
   ];
   for (const [label, trade, who, amount, deadline] of cases) {
-    await assert.rejects(env.esc(buyer).createAndFund(trade, who, amount, deadline), /revert|BadAmount|BadDeadline|SellerIsBuyer|ZeroAddress|ZeroTrade/, label);
+    await assert.rejects(createAndFund(env, buyer, trade, who, amount, deadline), /revert|BadAmount|BadDeadline|SellerIsBuyer|ZeroAddress|ZeroTrade/, label);
   }
   ok('duplicate trade id refused; zero/over-cap amount, bad deadline, seller=buyer, zero seller and zero trade id refused');
 }
@@ -323,7 +347,7 @@ const bal = (env, s) => env.token.balanceOf(s);
 {
   const env = await fresh('FeeOnTransferUSDC');
   const deadline = (await now()) + BigInt(DAY);
-  await assert.rejects(env.esc(buyer).createAndFund(tid('fot'), await addr(seller), 10n * ONE, deadline), /FeeOnTransfer|revert/);
+  await assert.rejects(createAndFund(env, buyer, tid('fot'), await addr(seller), 10n * ONE, deadline), /FeeOnTransfer|revert/);
   ok('fee-on-transfer token refused at funding');
 }
 
@@ -340,5 +364,79 @@ const bal = (env, s) => env.token.balanceOf(s);
   ok('released trade cannot be released, refunded, disputed or reused');
 }
 
-console.log(`\n${passed}/16 groups passed`);
+// ---- 15. trade-id squatting (KupiaSec report, 2026-11-06): without the operator's authorization
+//          for these exact terms nobody can open an escrow under a trade id
+{
+  const env = await fresh();
+  await (await env.token.mint(await addr(stranger), 10n * ONE)).wait();
+  await (await env.tok(stranger).approve(await env.escrow.getAddress(), ethers.MaxUint256)).wait();
+  const id = tid('squat');
+  const deadline = (await now()) + BigInt(DAY);
+  const s = await addr(seller);
+  const terms = { tradeId: id, buyer: await addr(buyer), seller: s, amount: 100n * ONE, deadline };
+  const sig = await authorize(env, terms);
+  assert.equal(ethers.TypedDataEncoder.hash(
+    { name: 'CommodexEscrow', version: '3', chainId: 43113, verifyingContract: await env.escrow.getAddress() }, FUND_TYPES, terms,
+  ), await env.escrow.fundDigest(id, terms.buyer, s, terms.amount, deadline));
+
+  const strangerAddr = await addr(stranger);
+  const feeToAddr = await addr(feeTo);
+  // The attacker front-runs with its own seller and 1 unit: no signature, or the buyer's copied signature.
+  await assert.rejects(env.esc(stranger).createAndFund(id, feeToAddr, 1n, deadline, '0x'), /BadAuthorization|revert/);
+  await assert.rejects(env.esc(stranger).createAndFund(id, feeToAddr, 1n, deadline, sig), /BadAuthorization|revert/);
+  // Replaying the buyer's exact calldata from another address fails too: the buyer is bound to msg.sender.
+  await assert.rejects(env.esc(stranger).createAndFund(id, s, 100n * ONE, deadline, sig), /BadAuthorization|revert/);
+  // Signed by someone other than the operator (here the attacker itself, or the buyer).
+  const selfSig = await authorize(env, { ...terms, buyer: strangerAddr, seller: feeToAddr, amount: 1n }, stranger);
+  await assert.rejects(env.esc(stranger).createAndFund(id, feeToAddr, 1n, deadline, selfSig), /BadAuthorization|revert/);
+  await assert.rejects(env.esc(buyer).createAndFund(id, s, 100n * ONE, deadline, await authorize(env, terms, buyer)), /BadAuthorization|revert/);
+  // The buyer cannot change the authorized terms either.
+  await assert.rejects(env.esc(buyer).createAndFund(id, s, 1n, deadline, sig), /BadAuthorization|revert/);
+  await assert.rejects(env.esc(buyer).createAndFund(id, feeToAddr, 100n * ONE, deadline, sig), /BadAuthorization|revert/);
+  await assert.rejects(env.esc(buyer).createAndFund(id, s, 100n * ONE, deadline + 1n, sig), /BadAuthorization|revert/);
+  // Malleable (high-s) copy and wrong length are refused.
+  const parsed = ethers.Signature.from(sig);
+  const N = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141n;
+  const highS = ethers.concat([parsed.r, ethers.toBeHex(N - BigInt(parsed.s), 32), ethers.toBeHex(parsed.v === 27 ? 28 : 27, 1)]);
+  await assert.rejects(env.esc(buyer).createAndFund(id, s, 100n * ONE, deadline, highS), /BadAuthorization|revert/);
+  await assert.rejects(env.esc(buyer).createAndFund(id, s, 100n * ONE, deadline, ethers.dataSlice(sig, 0, 64)), /BadAuthorization|revert/);
+  // A signature for another escrow deployment does not work here.
+  const other = await fresh();
+  const otherSig = await authorize(other, terms);
+  await assert.rejects(env.esc(buyer).createAndFund(id, s, 100n * ONE, deadline, otherSig), /BadAuthorization|revert/);
+  assert.equal(await status(env, id), 0); // still NONE: nothing was squatted
+
+  // The real buyer funds with the operator's signature.
+  await (await env.esc(buyer).createAndFund(id, s, 100n * ONE, deadline, sig)).wait();
+  assert.equal(await status(env, id), 1);
+
+  // After an operator change, signatures from the old operator stop working.
+  await (await env.escrow.setOperator(strangerAddr)).wait();
+  const id2 = tid('old-operator');
+  const t2 = { ...terms, tradeId: id2 };
+  await assert.rejects(env.esc(buyer).createAndFund(id2, s, 100n * ONE, deadline, await authorize(env, t2, operator)), /BadAuthorization|revert/);
+  await (await env.esc(buyer).createAndFund(id2, s, 100n * ONE, deadline, await authorize(env, t2, stranger))).wait();
+  ok('trade id cannot be squatted: operator signature over buyer, seller, amount, deadline required; no replay, tamper, malleable or cross-contract use');
+}
+
+// ---- 16. fee rate is locked in at funding
+{
+  const env = await fresh();
+  const id = tid('fee-lock');
+  await fund(env, id);                                // funded at 0%
+  await (await env.escrow.setFee(300)).wait();        // owner raises to 3%
+  await (await env.esc(buyer).release(id)).wait();
+  assert.equal(await bal(env, await addr(seller)), 100n * ONE);
+  assert.equal(await bal(env, await addr(feeTo)), 0n);
+  const id2 = tid('fee-lock-new');
+  await fund(env, id2);                               // new trade at 3%
+  await (await env.escrow.setFee(0)).wait();          // lowering later does not change it either
+  await (await env.esc(buyer).release(id2)).wait();
+  assert.equal(await bal(env, await addr(seller)), 197n * ONE);
+  assert.equal(await bal(env, await addr(feeTo)), 3n * ONE);
+  assert.equal((await env.escrow.escrows(id2)).feeBps, 300n);
+  ok('fee rate fixed at funding: a later setFee does not touch open trades');
+}
+
+console.log(`\n${passed}/18 groups passed`);
 child.kill();

@@ -20,12 +20,12 @@ Avalanche escrow contracts agent for the Commodex Avalanche C-Chain setup. Commo
 
 **Both contracts are deployed on Avalanche Fuji and source verified on the explorer.**
 CommodexAnchor v0 has anchored four hashes since 11 Oct 2026. CommodexEscrow v2 was deployed on 1 Nov 2026
-on Circle's test USDC. Full escrow specification: [`docs/escrow-spec.md`](docs/escrow-spec.md).
+on Circle's test USDC. **v3 (6 Nov 2026) fixes a trade-id squatting issue in v2 and is deployed at [`0x9B8691C642d9caB3A1299b10EF24ed5dc74b6432`](https://testnet.snowtrace.io/address/0x9B8691C642d9caB3A1299b10EF24ed5dc74b6432)**; v2 is paused and retired. Full escrow specification: [`docs/escrow-spec.md`](docs/escrow-spec.md).
 
 | Contract | What it does | State |
 |---|---|---|
 | [`contracts/CommodexAnchor.sol`](contracts/CommodexAnchor.sol) | Stores a 32-byte hash and the block it was mined in; emits `Anchored`. No funds, no token, no personal data. Only the operator may anchor; one hash once. | Deployed 11 Oct 2026 at [`0xe274C452dFb0D259FA413EEd3a830197a4Fd50ef`](https://testnet.snowtrace.io/address/0xe274C452dFb0D259FA413EEd3a830197a4Fd50ef); 7/7 local tests |
-| [`contracts/CommodexEscrow.sol`](contracts/CommodexEscrow.sol) | USDC escrow for one trade at a time. The buyer funds and releases, under Commodex's supervision as operator: once the 7-day deadline passes without a release, the operator may force the release to the seller. The seller or operator refunds. Disputes are resolved by the operator only and never expire. A 30-day backstop after the deadline returns an untouched trade to the buyer. Fee 0% (capped at 3%). Pause blocks new trades only. Rejects fee-on-transfer tokens. TESTNET ONLY. | v2 deployed 1 Nov 2026 at [`0xe453ebae20f06d53c44946b15A35E0e790A3089e`](https://testnet.snowtrace.io/address/0xe453ebae20f06d53c44946b15A35E0e790A3089e) on Circle Fuji USDC; source verified; 16/16 local test groups |
+| [`contracts/CommodexEscrow.sol`](contracts/CommodexEscrow.sol) | USDC escrow for one trade at a time. The buyer funds and releases, under Commodex's supervision as operator: once the 7-day deadline passes without a release, the operator may force the release to the seller. The seller or operator refunds. Disputes are resolved by the operator only and never expire. A 30-day backstop after the deadline returns an untouched trade to the buyer. Fee 0% (capped at 3%). Pause blocks new trades only. Rejects fee-on-transfer tokens. v3: every escrow needs the operator's EIP-712 signature over its terms, and the fee is fixed at funding. TESTNET ONLY. | v3 deployed 6 Nov 2026 at [`0x9B8691C642d9caB3A1299b10EF24ed5dc74b6432`](https://testnet.snowtrace.io/address/0x9B8691C642d9caB3A1299b10EF24ed5dc74b6432), source verified, 18/18 local test groups. v2 (paused 6 Nov 2026, squattable trade ids) deployed 1 Nov 2026 at [`0xe453ebae20f06d53c44946b15A35E0e790A3089e`](https://testnet.snowtrace.io/address/0xe453ebae20f06d53c44946b15A35E0e790A3089e) on Circle Fuji USDC |
 | [`contracts/mocks/TestTokens.sol`](contracts/mocks/TestTokens.sol) | Test stablecoin `tUSDC` (6 decimals, owner mints test supply) plus two adversarial tokens used only in tests: one burns 1% per transfer, one calls back into the escrow mid-payout. | Test-only, no value; the Fuji escrow uses Circle's test USDC instead |
 
 ## Run
@@ -42,7 +42,7 @@ node anchor.mjs check "<text or 0x hash>"
 Escrow (testnet only):
 
 ```bash
-npm run test:escrow                        # 16 test groups on an in-memory chain, no Fuji funds
+npm run test:escrow                        # 18 test groups on an in-memory chain, no Fuji funds
 npm run test:all                           # anchor + escrow
 COMMODEX_FUJI_KEY_FILE=/path/key node escrow.mjs deploy   # CommodexEscrow on Circle Fuji USDC, once; operator = Commodex staging server wallet
 COMMODEX_FUJI_KEY_FILE=/path/key node escrow.mjs token    # USDC balance of the key, sends nothing
@@ -93,6 +93,9 @@ Raw record: [`evidence/fuji-escrow.json`](evidence/fuji-escrow.json).
 
 | Date (UTC) | Step | Block | Explorer |
 |---|---|---|---|
+| 2026-11-06 | Source of v3 verified on the explorer (solc 0.8.24, optimizer 200, EVM paris) | — | https://testnet.snowtrace.io/address/0x9B8691C642d9caB3A1299b10EF24ed5dc74b6432/contract/43113/code |
+| 2026-11-06 20:11 | Owner pauses v2 (new escrows blocked; no open v2 trades) | 60644883 | https://testnet.snowtrace.io/tx/0x9065c427333564768e524ea91cb279ad82d942c5032e4a470a31f3c6fa3f0f8d |
+| 2026-11-06 20:10 | Deploy CommodexEscrow v3 (same token, operator and fee; operator EIP-712 authorization of every escrow, fee fixed at funding) | 60644849 | https://testnet.snowtrace.io/tx/0x306726b359bb198368839f7d991249e5c9a81e14d750208cedf3135243294293 |
 | 2026-11-02 | Buyer releases 1 USDC to the seller: trade `RELEASED` | 60383096 | https://testnet.snowtrace.io/tx/0xa69f086729fcd392e3e5d29989aa561a7135f44e3bee290813ef4405e25da9c9 |
 | 2026-11-02 | Buyer funds trade `0x96399d96…` with 1 USDC, 7-day deadline | 60383092 | https://testnet.snowtrace.io/tx/0x68fe1c6fade7af222b4aa99363c8d7eb52d578ac63242733de14c43d4359d519 |
 | 2026-11-02 | Buyer approves the escrow to pull 1 USDC | 60383091 | https://testnet.snowtrace.io/tx/0x4b09b23075d24f893534be4ecd54a462f12fdaea7a27957e239ae7bb719ce55b |

@@ -13,6 +13,53 @@
       "at": "2026-11-06T20:10:03.489Z",
       "tx": "https://testnet.snowtrace.io/tx/0x306726b359bb198368839f7d991249e5c9a81e14d750208cedf3135243294293",
       "address": "https://testnet.snowtrace.io/address/0x9B8691C642d9caB3A1299b10EF24ed5dc74b6432"
+    },
+    {
+      "step": "e2e-staging-terms",
+      "tradeId": "0x91adf93364345198f48c1c8ae946538dbd9c225223e8ac6e58c42e8a850288ff",
+      "at": "2026-11-06T21:02:05Z",
+      "reference": "E2E-V3-202611062102",
+      "note": "Commodex staging app recorded escrow.terms in its ledger (buyer 0xa654\u20267ecD, seller 0x215e\u2026ca7B, 1 USDC, deadline 1794603722)"
+    },
+    {
+      "step": "e2e-staging-authorize",
+      "tradeId": "0x91adf93364345198f48c1c8ae946538dbd9c225223e8ac6e58c42e8a850288ff",
+      "at": "2026-11-06T21:02Z",
+      "digest": "0x750cc29269cb1ecffe4e2365e4f4b8bdbee5104768b124c430dd88cbff5df1c6",
+      "note": "server operator wallet signed Fund(...) from the ledger terms; digest equal to fundDigest() on chain; wrong wallet refused"
+    },
+    {
+      "step": "e2e-squat-attempts",
+      "tradeId": "0x91adf93364345198f48c1c8ae946538dbd9c225223e8ac6e58c42e8a850288ff",
+      "at": "2026-11-06T21:02Z",
+      "note": "simulated createAndFund from another wallet: no signature, the buyer's signature, a zero signature -> all revert BadAuthorization"
+    },
+    {
+      "step": "e2e-approve",
+      "tradeId": "0x91adf93364345198f48c1c8ae946538dbd9c225223e8ac6e58c42e8a850288ff",
+      "txHash": "0xc0399de9693f3bd6d3e01cb844d0a1b8636714b89a01218f8004365481d17951",
+      "block": 60646943,
+      "tx": "https://testnet.snowtrace.io/tx/0xc0399de9693f3bd6d3e01cb844d0a1b8636714b89a01218f8004365481d17951",
+      "amount": "1"
+    },
+    {
+      "step": "e2e-fund",
+      "tradeId": "0x91adf93364345198f48c1c8ae946538dbd9c225223e8ac6e58c42e8a850288ff",
+      "txHash": "0x6f32766223755bd277ef9295c71c5c9689fad7403c5fa57ad4da3649a53b053a",
+      "block": 60646946,
+      "tx": "https://testnet.snowtrace.io/tx/0x6f32766223755bd277ef9295c71c5c9689fad7403c5fa57ad4da3649a53b053a",
+      "amount": "1",
+      "buyer": "0xa6547c2812140c0495113d4490eb0f2805A67ecD",
+      "seller": "0x215edFA8C9Db88A972FbEDb810b884ADe94fca7B",
+      "deadline": 1794603722
+    },
+    {
+      "step": "e2e-release-by-buyer",
+      "tradeId": "0x91adf93364345198f48c1c8ae946538dbd9c225223e8ac6e58c42e8a850288ff",
+      "txHash": "0x9044eeb6fc789ab53f9c449dfb828e54b6736515398187312b94365b13f2a8ae",
+      "block": 60646951,
+      "tx": "https://testnet.snowtrace.io/tx/0x9044eeb6fc789ab53f9c449dfb828e54b6736515398187312b94365b13f2a8ae",
+      "note": "status RELEASED, per-trade feeBps 0, EscrowFunded matches the ledger terms"
     }
   ],
   "tokenKind": "Circle USDC (Fuji test)",

@@ -93,6 +93,9 @@ Raw record: [`evidence/fuji-escrow.json`](evidence/fuji-escrow.json).
 
 | Date (UTC) | Step | Block | Explorer |
 |---|---|---|---|
+| 2026-11-06 21:03 | v3 end to end from the Commodex staging app: buyer releases 1 USDC (trade `0x91adf933…`, status RELEASED, fee 0, funding matches the ledger terms) | 60646951 | https://testnet.snowtrace.io/tx/0x9044eeb6fc789ab53f9c449dfb828e54b6736515398187312b94365b13f2a8ae |
+| 2026-11-06 21:03 | Buyer funds with the operator signature issued by the staging app from its ledger terms (another wallet without it, or with the buyer's, reverts `BadAuthorization`) | 60646946 | https://testnet.snowtrace.io/tx/0x6f32766223755bd277ef9295c71c5c9689fad7403c5fa57ad4da3649a53b053a |
+| 2026-11-06 21:03 | Buyer approves the escrow to pull 1 USDC | 60646943 | https://testnet.snowtrace.io/tx/0xc0399de9693f3bd6d3e01cb844d0a1b8636714b89a01218f8004365481d17951 |
 | 2026-11-06 | Source of v3 verified on the explorer (solc 0.8.24, optimizer 200, EVM paris) | — | https://testnet.snowtrace.io/address/0x9B8691C642d9caB3A1299b10EF24ed5dc74b6432/contract/43113/code |
 | 2026-11-06 20:11 | Owner pauses v2 (new escrows blocked; no open v2 trades) | 60644883 | https://testnet.snowtrace.io/tx/0x9065c427333564768e524ea91cb279ad82d942c5032e4a470a31f3c6fa3f0f8d |
 | 2026-11-06 20:10 | Deploy CommodexEscrow v3 (same token, operator and fee; operator EIP-712 authorization of every escrow, fee fixed at funding) | 60644849 | https://testnet.snowtrace.io/tx/0x306726b359bb198368839f7d991249e5c9a81e14d750208cedf3135243294293 |

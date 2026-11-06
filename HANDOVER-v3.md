@@ -2,7 +2,18 @@
 
 Date: 6 November 2026. Testnet only (Avalanche Fuji, chain id 43113).
 
-## Why
+## Status (6 Nov 2026, evening)
+
+| Step | State |
+|---|---|
+| A. Review, tests, publish | Done. Tests 7/7 + 18/18 on the server; pushed to `Impact-Capital-Management/commodex-agent-avalanche-contracts`. |
+| B. Deploy v3 on Fuji | Done: `0x9B8691C642d9caB3A1299b10EF24ed5dc74b6432`, block 60644849, source verified (solc 0.8.24, 200 runs, paris). Docs + evidence updated. |
+| C. Retire v2 | Done: `pause()` at block 60644883. v2 had one trade, already RELEASED: nothing to settle. |
+| D. Commodex app (staging) | Done on branch `tenant/commodex-r16` (worktree `/root/cdx-r16`): v3 address/ABI, status index 6, ledger `escrow.terms`, funding authorization (`POST /api/account/escrow/authorize` + console), EscrowFunded matched on buyer/seller/amount/deadline, per-trade fee in the panel, tests. Release script `/root/cdx-r16-release.sh` (staging only). |
+| E. End to end on staging | Done 21:03 UTC: terms -> authorization -> squat attempts revert `BadAuthorization` -> fund -> release; trade `0x91adf933…` RELEASED, fee 0, ledger match. |
+| F. Security | Open: external audit before mainnet; operator key stays on the server; owner key offline (it was on the server only during the deploy and the v2 pause, then shredded). |
+
+
 
 On 6 Nov 2026, KupiaSec (an unsolicited security firm) reported an issue in the deployed `CommodexEscrow` v2
 (`0xe453ebae20f06d53c44946b15A35E0e790A3089e`). We checked it and it is real.
